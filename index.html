@@ -601,23 +601,44 @@
             }
 
             saveData() {
-                const data = JSON.stringify(this.measurements);
-                // Using a cookie as a simple storage method
-                document.cookie = `measurements=${encodeURIComponent(data)}; max-age=${365 * 24 * 60 * 60}; path=/`;
+                try {
+                    localStorage.setItem('measurements', JSON.stringify(this.measurements));
+                    console.log('Data saved to localStorage');
+                } catch (e) {
+                    // Fallback to cookies if localStorage fails
+                    const data = JSON.stringify(this.measurements);
+                    document.cookie = `measurements=${encodeURIComponent(data)}; max-age=${365 * 24 * 60 * 60}; path=/`;
+                    console.log('Data saved to cookies (localStorage failed)');
+                }
             }
 
             loadData() {
+                try {
+                    // Try localStorage first
+                    const data = localStorage.getItem('measurements');
+                    if (data) {
+                        console.log('Data loaded from localStorage');
+                        return JSON.parse(data);
+                    }
+                } catch (e) {
+                    console.error('localStorage not available:', e);
+                }
+
+                // Fallback to cookies
                 const cookies = document.cookie.split(';');
                 const measurementsCookie = cookies.find(cookie => cookie.trim().startsWith('measurements='));
                 
                 if (measurementsCookie) {
                     try {
                         const data = decodeURIComponent(measurementsCookie.split('=')[1]);
+                        console.log('Data loaded from cookies');
                         return JSON.parse(data);
                     } catch (e) {
-                        console.error('Error loading data:', e);
+                        console.error('Error loading data from cookies:', e);
                     }
                 }
+                
+                console.log('No existing data found');
                 return [];
             }
         }
@@ -638,37 +659,159 @@
             });
         }
 
-        // PWA Install Prompt
+        // PWA Install Prompt - Improved
         let deferredPrompt;
+        let installButton;
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
+            showInstallButton();
+        });
+
+        function showInstallButton() {
+            if (installButton) return; // Don't create multiple buttons
+
+            installButton = document.createElement('div');
+            installButton.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 25px;
+                    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 600;
+                    z-index: 1000;
+                    animation: pulse 2s infinite;
+                    border: none;
+                ">
+                    📱 Install App
+                </div>
+                <style>
+                    @keyframes pulse {
+                        0% { transform: scale(1); }
+                        50% { transform: scale(1.05); }
+                        100% { transform: scale(1); }
+                    }
+                </style>
+            `;
             
-            // Show install button
-            const installButton = document.createElement('button');
-            installButton.textContent = '📱 Install App';
-            installButton.className = 'btn';
-            installButton.style.position = 'fixed';
-            installButton.style.bottom = '20px';
-            installButton.style.right = '20px';
-            installButton.style.zIndex = '1000';
-            installButton.style.width = 'auto';
-            installButton.style.padding = '10px 20px';
-            installButton.style.fontSize = '14px';
-            
-            installButton.addEventListener('click', () => {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
+            installButton.onclick = async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    
+                    if (outcome === 'accepted') {
+                        console.log('User installed the app');
                         installButton.remove();
+                        showSuccessMessage();
                     }
                     deferredPrompt = null;
-                });
-            });
+                } else {
+                    showInstallInstructions();
+                }
+            };
             
             document.body.appendChild(installButton);
+        }
+
+        function showSuccessMessage() {
+            const message = document.createElement('div');
+            message.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #48bb78;
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+                    z-index: 1000;
+                    font-weight: 600;
+                ">
+                    ✅ App installed! Check your home screen
+                </div>
+            `;
+            
+            document.body.appendChild(message);
+            setTimeout(() => message.remove(), 4000);
+        }
+
+        function showInstallInstructions() {
+            const instructions = document.createElement('div');
+            instructions.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    padding: 30px;
+                    border-radius: 15px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                    z-index: 1001;
+                    max-width: 400px;
+                    text-align: center;
+                ">
+                    <h3 style="margin-bottom: 20px; color: #4a5568;">Install This App</h3>
+                    <div style="margin-bottom: 20px; color: #666; line-height: 1.5;">
+                        <strong>On Mobile:</strong><br>
+                        Tap the browser menu → "Add to Home Screen"<br><br>
+                        <strong>On Desktop:</strong><br>
+                        Look for the install icon (⊕) in your address bar
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        background: #4facfe;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-weight: 600;
+                    ">Got it!</button>
+                </div>
+                <div style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    z-index: 1000;
+                " onclick="this.parentElement.remove()"></div>
+            `;
+            
+            document.body.appendChild(instructions);
+        }
+
+        // Check if app is already installed/running as PWA
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA was installed');
+            if (installButton) {
+                installButton.remove();
+            }
+            showSuccessMessage();
         });
+
+        // Detect if running as installed PWA
+        function isPWA() {
+            return window.matchMedia('(display-mode: standalone)').matches || 
+                   window.navigator.standalone === true;
+        }
+
+        if (isPWA()) {
+            console.log('Running as installed PWA');
+            // Hide install button if already running as PWA
+            if (installButton) {
+                installButton.remove();
+            }
+        }
     </script>
 </body>
 </html>
