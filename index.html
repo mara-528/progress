@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Body Measurement Tracker</title>
+    <meta name="description" content="Track your weight and body measurements over time with beautiful charts and statistics">
+    <meta name="theme-color" content="#4facfe">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Measurement Tracker">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .input-section {
+            background: #f8f9ff;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #e1e8ff;
+        }
+
+        .input-section h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .chart-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-section h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 500;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.85em;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f7faff;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+
+        .delete-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .delete-btn:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+
+        .metric-selector {
+            margin-bottom: 20px;
+        }
+
+        .metric-selector select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            font-size: 0.8em;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .empty-state i {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Body Measurement Tracker</h1>
+            <p>Track your weight and body measurements over time</p>
+        </div>
+
+        <div class="content">
+            <div class="input-section">
+                <h2>Add New Measurement</h2>
+                <form id="measurementForm">
+                    <div class="form-group">
+                        <label for="date">Date:</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="weight">Weight (kg):</label>
+                        <input type="number" id="weight" step="0.1" min="0" placeholder="e.g., 70.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="bust">Bust (cm):</label>
+                        <input type="number" id="bust" step="0.1" min="0" placeholder="e.g., 90.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="waist">Waist (cm):</label>
+                        <input type="number" id="waist" step="0.1" min="0" placeholder="e.g., 75.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="hip">Hip (cm):</label>
+                        <input type="number" id="hip" step="0.1" min="0" placeholder="e.g., 95.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="leg">Leg (cm):</label>
+                        <input type="number" id="leg" step="0.1" min="0" placeholder="e.g., 60.0">
+                    </div>
+                    <button type="submit" class="btn">Add Measurement</button>
+                </form>
+            </div>
+
+            <div class="chart-section">
+                <h2>Progress Tracking</h2>
+                <div class="metric-selector">
+                    <select id="metricSelect">
+                        <option value="weight">Weight (kg)</option>
+                        <option value="bust">Bust (cm)</option>
+                        <option value="waist">Waist (cm)</option>
+                        <option value="hip">Hip (cm)</option>
+                        <option value="leg">Leg (cm)</option>
+                    </select>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+                <div class="chart-container">
+                    <canvas id="measurementChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding: 0 30px 30px;">
+            <h2 style="color: #4a5568; margin-bottom: 20px; font-size: 1.5em; font-weight: 500;">Measurement History</h2>
+            <div id="tableContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        class MeasurementTracker {
+            constructor() {
+                this.measurements = this.loadData();
+                this.chart = null;
+                this.currentMetric = 'weight';
+                this.initializeApp();
+            }
+
+            initializeApp() {
+                this.setupEventListeners();
+                this.setTodayDate();
+                this.updateDisplay();
+            }
+
+            setupEventListeners() {
+                document.getElementById('measurementForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addMeasurement();
+                });
+
+                document.getElementById('metricSelect').addEventListener('change', (e) => {
+                    this.currentMetric = e.target.value;
+                    this.updateChart();
+                    this.updateStats();
+                });
+            }
+
+            setTodayDate() {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('date').value = today;
+            }
+
+            addMeasurement() {
+                const formData = new FormData(document.getElementById('measurementForm'));
+                const measurement = {
+                    id: Date.now(),
+                    date: formData.get('date'),
+                    weight: parseFloat(formData.get('weight')) || null,
+                    bust: parseFloat(formData.get('bust')) || null,
+                    waist: parseFloat(formData.get('waist')) || null,
+                    hip: parseFloat(formData.get('hip')) || null,
+                    leg: parseFloat(formData.get('leg')) || null
+                };
+
+                // Validate that at least one measurement is provided
+                const hasData = Object.keys(measurement).some(key => 
+                    key !== 'id' && key !== 'date' && measurement[key] !== null
+                );
+
+                if (!hasData) {
+                    alert('Please enter at least one measurement value.');
+                    return;
+                }
+
+                this.measurements.push(measurement);
+                this.measurements.sort((a, b) => new Date(a.date) - new Date(b.date));
+                this.saveData();
+                this.updateDisplay();
+                document.getElementById('measurementForm').reset();
+                this.setTodayDate();
+            }
+
+            deleteMeasurement(id) {
+                if (confirm('Are you sure you want to delete this measurement?')) {
+                    this.measurements = this.measurements.filter(m => m.id !== id);
+                    this.saveData();
+                    this.updateDisplay();
+                }
+            }
+
+            updateDisplay() {
+                this.updateChart();
+                this.updateTable();
+                this.updateStats();
+            }
+
+            updateChart() {
+                const ctx = document.getElementById('measurementChart').getContext('2d');
+                
+                if (this.chart) {
+                    this.chart.destroy();
+                }
+
+                if (this.measurements.length === 0) {
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = '#a0aec0';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No data available. Add measurements to see your progress!', 
+                        ctx.canvas.width / 2, ctx.canvas.height / 2);
+                    return;
+                }
+
+                const data = this.measurements
+                    .filter(m => m[this.currentMetric] !== null)
+                    .map(m => ({
+                        x: m.date,
+                        y: m[this.currentMetric]
+                    }));
+
+                if (data.length === 0) {
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = '#a0aec0';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`No ${this.currentMetric} data available.`, 
+                        ctx.canvas.width / 2, ctx.canvas.height / 2);
+                    return;
+                }
+
+                const unit = this.currentMetric === 'weight' ? 'kg' : 'cm';
+                const metricName = this.currentMetric.charAt(0).toUpperCase() + this.currentMetric.slice(1);
+
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: `${metricName} (${unit})`,
+                            data: data,
+                            borderColor: 'rgb(79, 172, 254)',
+                            backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgb(79, 172, 254)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    parser: 'YYYY-MM-DD',
+                                    tooltipFormat: 'MMM DD, YYYY',
+                                    displayFormats: {
+                                        day: 'MMM DD',
+                                        week: 'MMM DD',
+                                        month: 'MMM YYYY'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: `${metricName} (${unit})`
+                                }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+            }
+
+            updateStats() {
+                const statsGrid = document.getElementById('statsGrid');
+                
+                if (this.measurements.length === 0) {
+                    statsGrid.innerHTML = '';
+                    return;
+                }
+
+                const data = this.measurements
+                    .filter(m => m[this.currentMetric] !== null)
+                    .map(m => m[this.currentMetric]);
+
+                if (data.length === 0) {
+                    statsGrid.innerHTML = '';
+                    return;
+                }
+
+                const current = data[data.length - 1];
+                const min = Math.min(...data);
+                const max = Math.max(...data);
+                const avg = (data.reduce((a, b) => a + b, 0) / data.length);
+                const change = data.length > 1 ? current - data[0] : 0;
+
+                const unit = this.currentMetric === 'weight' ? 'kg' : 'cm';
+
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="value">${current.toFixed(1)}</div>
+                        <div class="label">Current</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">${avg.toFixed(1)}</div>
+                        <div class="label">Average</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">${min.toFixed(1)}</div>
+                        <div class="label">Minimum</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">${max.toFixed(1)}</div>
+                        <div class="label">Maximum</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">${change >= 0 ? '+' : ''}${change.toFixed(1)}</div>
+                        <div class="label">Total Change</div>
+                    </div>
+                `;
+            }
+
+            updateTable() {
+                const container = document.getElementById('tableContainer');
+                
+                if (this.measurements.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <span style="font-size: 3em;">📈</span>
+                            <h3>No measurements yet</h3>
+                            <p>Start tracking by adding your first measurement above!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const tableHTML = `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Weight (kg)</th>
+                                <th>Bust (cm)</th>
+                                <th>Waist (cm)</th>
+                                <th>Hip (cm)</th>
+                                <th>Leg (cm)</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${this.measurements.slice().reverse().map(m => `
+                                <tr>
+                                    <td>${new Date(m.date).toLocaleDateString()}</td>
+                                    <td>${m.weight ? m.weight.toFixed(1) : '-'}</td>
+                                    <td>${m.bust ? m.bust.toFixed(1) : '-'}</td>
+                                    <td>${m.waist ? m.waist.toFixed(1) : '-'}</td>
+                                    <td>${m.hip ? m.hip.toFixed(1) : '-'}</td>
+                                    <td>${m.leg ? m.leg.toFixed(1) : '-'}</td>
+                                    <td>
+                                        <button class="delete-btn" onclick="tracker.deleteMeasurement(${m.id})">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                container.innerHTML = tableHTML;
+            }
+
+            saveData() {
+                const data = JSON.stringify(this.measurements);
+                // Using a cookie as a simple storage method
+                document.cookie = `measurements=${encodeURIComponent(data)}; max-age=${365 * 24 * 60 * 60}; path=/`;
+            }
+
+            loadData() {
+                const cookies = document.cookie.split(';');
+                const measurementsCookie = cookies.find(cookie => cookie.trim().startsWith('measurements='));
+                
+                if (measurementsCookie) {
+                    try {
+                        const data = decodeURIComponent(measurementsCookie.split('=')[1]);
+                        return JSON.parse(data);
+                    } catch (e) {
+                        console.error('Error loading data:', e);
+                    }
+                }
+                return [];
+            }
+        }
+
+        // Initialize the app
+        const tracker = new MeasurementTracker();
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button
+            const installButton = document.createElement('button');
+            installButton.textContent = '📱 Install App';
+            installButton.className = 'btn';
+            installButton.style.position = 'fixed';
+            installButton.style.bottom = '20px';
+            installButton.style.right = '20px';
+            installButton.style.zIndex = '1000';
+            installButton.style.width = 'auto';
+            installButton.style.padding = '10px 20px';
+            installButton.style.fontSize = '14px';
+            
+            installButton.addEventListener('click', () => {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                        installButton.remove();
+                    }
+                    deferredPrompt = null;
+                });
+            });
+            
+            document.body.appendChild(installButton);
+        });
+    </script>
+</body>
+</html>
